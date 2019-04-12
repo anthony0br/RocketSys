@@ -6,10 +6,10 @@
 
 ### Aims
 - The original Rocket System aims: allow everyone to simulate realistic rocket and missile launches in Roblox games
-- Provide a better and less limited experience than its predesccesor: Rocket System II
+- Provide a better and less limited experience than its predecessor: Rocket System II
 
 ### Usage
 The new rocket system will feature an API that you can use to implement advanced rocket physics and controls into your game. More information on this will be available soon.
 
 ### Community
-There is a supportive community surrounding the rocket system. Our discord server consists of a large variety of people - from roblox game developers to those who model rockets. You can join us [here](https://discord.gg/bqRdNPw).
+There is a supportive community surrounding the rocket system. Our discord server consists of a large variety of people - from Roblox game developers to those who model rockets. You can join us [here](https://discord.gg/bqRdNPw).
