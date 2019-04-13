@@ -68,7 +68,7 @@
 					- Updates sound
 		
 		
-			Rocket.stageName:setThrottle(t)
+			Rocket.stages.stageName:setThrottle(t)
 			
 				ARGUMENTS:
 					- t: The desired throttle as a decimal - 0 to 1
@@ -102,7 +102,7 @@ GRAV = 6.673E-11
 EARTH_MASS = 5.972E+24
 EARTH_RADIUS = 6371E+3
 DENSITY_ASL = 1.225
-ATMOS_END = 330000
+ATMOS_END = 100000
 TEMPERATURE = 15
 HUMIDITY = 0.75
 
@@ -113,7 +113,7 @@ exp = math.exp
 sin = math.sin
 sqrt = math.sqrt
 clamp = math.clamp
-absolute = math.abs
+rabs = math.abs
 
 -- Constructors
 newInstance = Instance.new
@@ -131,18 +131,18 @@ function getParts(m)
 end
 
 function getModelCentre(model)
-	local parts = getParts(model)
 	local sX,sY,sZ
 	local mX,mY,mZ
-	
-	for i,v in pairs(parts) do
-		local pos = v.CFrame.p
-		sX = (not sX and pos.X) or (pos.X < sX and pos.X or sX)
-		sY = (not sY and pos.Y) or (pos.Y < sY and pos.Y or sY)
-		sZ = (not sZ and pos.Z) or (pos.Z < sZ and pos.Z or sZ)
-		mX = (not mX and pos.X) or (pos.X > mX and pos.X or mX)
-		mY = (not mY and pos.Y) or (pos.Y > mY and pos.Y or mY)
-		mZ = (not mZ and pos.Z) or (pos.Z > mZ and pos.Z or mZ)
+	for i, v in pairs(getParts(model)) do
+		if v.Name ~= 'PrimaryPart' and v ~= model.PrimaryPart then
+			local pos = v.CFrame.p
+			sX = (not sX and pos.x) or (pos.x < sX and pos.x or sX)
+			sY = (not sY and pos.y) or (pos.y < sY and pos.y or sY)
+			sZ = (not sZ and pos.z) or (pos.z < sZ and pos.z or sZ)
+			mX = (not mX and pos.x) or (pos.x > mX and pos.x or mX)
+			mY = (not mY and pos.y) or (pos.y > mY and pos.y or mY)
+			mZ = (not mZ and pos.z) or (pos.z > mZ and pos.z or mZ)
+		end
 	end
 	
 	return V3((sX+mX)/2,(sY+mY)/2,(sZ+mZ)/2)
@@ -167,7 +167,7 @@ function getDrag(density, velocity, area, coefficient)
 end
 
 function abs(x)
-	return typeof(x) == 'number' and absolute(x) or 'vector3' and V3(absolute(x.x), absolute(x.y), absolute(x.z))
+	return typeof(x) == 'number' and rabs(x) or 'vector3' and V3(rabs(x.x), rabs(x.y), rabs(x.z))
 end
 
 
@@ -181,8 +181,10 @@ do
 	function Stage.new(tab)
 		local self = tab
 		self.throttle = 0
-		self.propellant = self.wetMass - self.dryMass
-		self.mass = self.wetMass
+		if not self.propellant or not self.mass then
+			self.propellant = self.wetMass - self.dryMass
+			self.mass = self.wetMass
+		end
 		setmetatable(self, Stage)
 		return self
 	end
@@ -194,27 +196,15 @@ do
 	end
 	
 	function Stage:separate(rocket)
-		local stage = self
-		self = nil
-		
-		-- Break stage connector
-		stage.model.PrimaryPart.StageConnector:Destroy()
-		
-		-- Reparent
-		self.model.Parent = workspace
-		
-		-- Recalculate PrimaryPart CFrame
-		if rocket.model and rocket.model.PrimaryPart then
-			rocket.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(rocket.model))
+		if rocket and rocket.model and rocket.model.PrimaryPart then
+			self.model.PrimaryPart.StageConnector:Destroy()
+			self.model.Parent = workspace
+			rocket:removeStage(self.name)
 		else
-			warn('Invalid rocket argument in separation - your rocket may not function correctly')
+			warn('Argument 1 invalid or nil in method :separate()')
 		end
-			
-		-- Recalculate mass
-		rocket.robloxMass = getMass(rocket.model)
 		
-		-- Return new rocket
-		return Rocket.new(stage)
+		return Rocket.new(self)
 	end
 end
 
@@ -256,11 +246,25 @@ do
 			end
 		end
 		
-		-- Create main part
+		-- Create PrimaryPart
 		self.model.PrimaryPart = newInstance('Part')
 		self.model.PrimaryPart.Parent = self.model
 		self.model.PrimaryPart.Name = 'PrimaryPart'
 		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model))
+		self.model.PrimaryPart.Transparency = 1
+		self.model.PrimaryPart.CanCollide = false
+		
+		-- Create BodyMovers
+		self.bodyVelocity = newInstance('BodyVelocity')
+		self.bodyGyro = newInstance('BodyGyro')
+		self.bodyVelocity.MaxForce = V3()
+		self.bodyVelocity.P = 0
+		self.bodyVelocity.Velocity = V3()
+		self.bodyGyro.CFrame = self.model.PrimaryPart.CFrame
+		self.bodyGyro.MaxTorque = V3()
+		self.bodyGyro.P = 0
+		self.bodyVelocity.Parent = self.model.PrimaryPart
+		self.bodyGyro.Parent = self.model.PrimaryPart
 		
 		-- Create welds
 		for _, stage in pairs(self.stages) do
@@ -275,27 +279,14 @@ do
 					weld.Parent = stage.model.PrimaryPart
 				end
 			end
-			-- Connect stages
+			-- Create stage connectors
 			local weld = newInstance('WeldConstraint')
 			weld.Name = 'StageConnector'
-			weld.Part0 = self.model.PrimaryPart
 			weld.Part1 = stage.model.PrimaryPart
+			weld.Part0 = self.model.PrimaryPart
 			weld.Parent = stage.model.PrimaryPart
 			stage.model.PrimaryPart.Anchored = false
-			self.model.PrimaryPart.Anchored = false
 		end
-		
-		-- Create body movers
-		self.bodyVelocity = newInstance('BodyVelocity')
-		self.bodyGyro = newInstance('BodyGyro')
-		self.bodyVelocity.MaxForce = V3()
-		self.bodyVelocity.P = 0
-		self.bodyVelocity.Velocity = V3()
-		self.bodyGyro.CFrame = self.model.PrimaryPart.CFrame
-		self.bodyGyro.MaxTorque = V3()
-		self.bodyGyro.P = 0
-		self.bodyVelocity.Parent = self.model.PrimaryPart
-		self.bodyGyro.Parent = self.model.PrimaryPart
 		
 		-- Calculate mass
 		self.robloxMass = getMass(self.model)
@@ -316,8 +307,8 @@ do
 		lastTick = tick()
 		
 		-- Performance stats
-		local velocity = self.model.PrimaryPart.Velocity
-		local altitude = self.model.PrimaryPart.CFrame.Y
+		local velocity = self.model.PrimaryPart.Velocity * SCALE -- m/s
+		local altitude = self.model.PrimaryPart.CFrame.y * SCALE -- m
 		
 		-- Update sound
 		
@@ -332,7 +323,7 @@ do
 		end
 		self.mass = mass
 		
-		-- Calculate ΔV
+		-- The rocket equation
 		local dv = 0
 		for i, v in pairs(self.stages) do
 			local specificImpulse = ((altitude * v.specificImpulseVac / ATMOS_END) + v.specificImpulseASL) * v.throttle
@@ -348,33 +339,43 @@ do
 		local drag = V3()
 		local frontalStage, highestStage, lowestStage, highestHeight, lowestHeight
 		for i, v in pairs(self.stages) do
-			if not highestHeight or v.model.PrimaryPart.CFrame.Y > highestHeight then
+			if not highestHeight or v.model.PrimaryPart.CFrame.y > highestHeight then
 				highestStage = v
-				highestHeight = v.model.PrimaryPart.CFrame.Y
+				highestHeight = v.model.PrimaryPart.CFrame.y
 			end
-			if lowestHeight or v.model.PrimaryPart.CFrame.Y < highestHeight then
+			if not lowestHeight or v.model.PrimaryPart.CFrame.y < lowestHeight then
 				lowestStage = v
-				lowestHeight = v.model.PrimaryPart.CFrame.Y
+				lowestHeight = v.model.PrimaryPart.CFrame.y
 			end
-			drag = drag + getDrag(density, velocity, v.model:GetExtentsSize(), v.dragCoefficient)
+			local eSize = v.model:GetExtentsSize() * SCALE
+			local xArea, zArea = eSize.x * eSize.y, eSize.z * eSize.y
+			drag = drag + getDrag(density, velocity, Vector3.new(xArea, 0, zArea), v.dragCoefficient)
 		end
 		frontalStage = velocity.y > 0 and highestStage or lowestStage
-		drag = V3(drag.x, getDrag(density, velocity.y, frontalStage.model:GetExtentsSize().y, frontalStage.dragCoefficient.y), drag.z)
+		local eSize = frontalStage.model:GetExtentsSize() * SCALE
+		drag = V3(drag.x, getDrag(density, velocity.y, eSize.x * eSize.z, frontalStage.dragCoefficient.y), drag.z)
 		
 		-- Calculate gravity
-		local orbitalSpeed = sqrt(GRAV * EARTH_MASS) / (EARTH_RADIUS + altitude * SCALE)
+		local orbitalSpeed = sqrt(GRAV * EARTH_MASS) / (EARTH_RADIUS + altitude)
 		local horizontalSpeed = sqrt(velocity.x^2, velocity.z^2)
-		local gravitationalAcceleration = ((GRAV * EARTH_MASS) / (EARTH_RADIUS + altitude * SCALE)^2) * (horizontalSpeed - orbitalSpeed) / orbitalSpeed
+		local gravitationalAcceleration = ((GRAV * EARTH_MASS) / (EARTH_RADIUS + altitude)^2) * (horizontalSpeed - orbitalSpeed) / orbitalSpeed
 		
 		-- Update body velocity
-		local acceleration = (self.model.PrimaryPart.CFrame.upVector * dv) - (drag / self.mass) - V3(0, gravitationalAcceleration, 0) * SCALE
-		self.bodyVelocity.Velocity = self.bodyVelocity.Velocity + acceleration * dt
+		local acceleration = (self.model.PrimaryPart.CFrame.upVector * dv) - (drag / self.robloxMass) + V3(0, gravitationalAcceleration, 0)
+		self.bodyVelocity.Velocity = self.bodyVelocity.Velocity + (acceleration / SCALE * dt)
 		self.bodyVelocity.MaxForce = V3(0, workspace.Gravity * self.robloxMass, 0) + (acceleration * self.robloxMass * workspace.Gravity)
 		self.bodyVelocity.P = self.bodyVelocity.Velocity.Magnitude * self.bodyVelocity.MaxForce.Magnitude
 		
 		-- Update body gyro
 		self.bodyGyro.CFrame = self.bodyGyro.CFrame -- velocity.unit
 		self.bodyGyro.MaxTorque = V3()
+	end
+	
+	function Rocket:removeStage(stage)
+		self.stages[stage] = nil
+		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model))
+		print(CFrame.new(getModelCentre(self.model)))
+		self.robloxMass = getMass(self.model)
 	end
 end
 
