@@ -1,0 +1,1 @@
+-- Classic, but the second stage turns around and re-enters by performing a de-orbital burn. A parachute may be deployed.
