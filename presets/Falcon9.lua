@@ -6,7 +6,7 @@ stage1 = {
     specificImpulseVac =311;
     wetMass =410365.5;
     dryMass = 93490.5;  
-    burnRate = 1,956;
+    burnRate = 1956;
 dragCoefficient = Vector3.new(0.8,0.8, 0.8)
 }
 stage2 = {
