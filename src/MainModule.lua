@@ -116,6 +116,7 @@ TEMPERATURE = 15
 HUMIDITY = 0.75
 MOVING_VELOCITY = 0.05
 GRAVITY_CONSTANT = 6.673E-11
+DIRECTION = Vector3.new(0, 1, 0)
 
 -- Math functions
 log = math.log
@@ -309,7 +310,7 @@ do
 		self.model.PrimaryPart = newInstance("Part")
 		self.model.PrimaryPart.Parent = self.model
 		self.model.PrimaryPart.Name = "PrimaryPart"
-		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model))
+		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model), DIRECTION)
 		self.model.PrimaryPart.Transparency = 1
 		self.model.PrimaryPart.CanCollide = false
 		
@@ -370,8 +371,8 @@ do
 				lowestHeight = v.model.PrimaryPart.CFrame.y
 			end
 		end
-		local forward = abs((self.model.PrimaryPart.CFrame.upVector - velocity).magnitude) 
-						<= ((-self.model.PrimaryPart.CFrame.upVector - velocity).magnitude)
+		local forward = abs((self.model.PrimaryPart.CFrame.lookVector - velocity).magnitude) 
+						<= ((-self.model.PrimaryPart.CFrame.lookVector - velocity).magnitude)
 		frontalStage = forward and highestStage or lowestStage
 		
 		-- Iterate through stages to update each one
@@ -384,7 +385,7 @@ do
 			-- Calculate thrust using the rocket equation
 			local specificImpulse = ((altitude * stage.specificImpulseVac / KARMAN_LINE) + stage.specificImpulseASL) * stage.throttle
 			local dv = clamp(stage.propellant, 0, 1) * (specificImpulse * log(stage.wetMass / stage.dryMass)) / (stage.mass / stage.dryMass)
-			local thrust = dv *	stage.robloxMass * stage.model.PrimaryPart.CFrame.upVector
+			local thrust = dv *	stage.robloxMass * stage.model.PrimaryPart.CFrame.lookVector
 			
 			-- Calculate drag
 			local density = getDensity(altitude)
@@ -406,17 +407,12 @@ do
 			stage.model.PrimaryPart.VectorForce.Force = (idleForce + thrust) - (gravity + drag)
 			force = force + stage.model.PrimaryPart.VectorForce.Force
 		end
-		
-		-- Update BodyGyro
---		self.model.PrimaryPart.BodyGyro.CFrame = Cf(V3(),
---											     self.model.PrimaryPart.BodyGyro.CFrame.upVector)
-		self.model.PrimaryPart.BodyGyro.MaxTorque = V3()
 	end
 	
 	-- Used by :separate to ensure that separated stages are no longer simulated
 	function Rocket:removeStage(stage)
 		self.stages[stage] = nil
-		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model))
+		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model), DIRECTION)
 		print(CFrame.new(getModelCentre(self.model)))
 	end
 end
