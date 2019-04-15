@@ -1,18 +1,19 @@
-RunService = game:GetService('RunService')
-rs = require(script.Parent['Rocket System III'].MainModule)
+RunService = game:GetService("RunService")
+rs = require(script.Parent["Rocket System III"].MainModule)
+
 
 stage1 = {
-    name = 'stage1';
+    name = "stage1";
     model = workspace.RocketStages.Stage1;
     specificImpulseASL =282;
     specificImpulseVac =311;
-    wetMass = 410365.5;
-    dryMass = 93490.5;
+    wetMass =410365.5;
+    dryMass = 93490.5;  
     burnRate = 1956;
-	dragCoefficient = Vector3.new(0.8, 0.8, 0.8)
+dragCoefficient = Vector3.new(0.8,0.8, 0.8)
 }
 stage2 = {
-    name = 'stage2';
+    name = "stage2";
     model = workspace.RocketStages.Stage2;
     specificImpulseASL = 348;
     specificImpulseVac = 348;
@@ -22,7 +23,7 @@ stage2 = {
     dragCoefficient = Vector3.new(0.8, 0.8, 0.8)
 }
 fairing = {
-    name = 'fairing';
+    name = "fairing";
     model = workspace.RocketStages.Fairing;
     specificImpulseASL = 0;
     specificImpulseVac = 0;
@@ -42,5 +43,7 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+wait(2)
 rocket = rs.Rocket.new(stage1, stage2, fairing)
 rocket.stages.stage1:setThrottle(1)
+--rocket.stages.stage1:setThrustVector(Vector3.new(0, 0, 0))
