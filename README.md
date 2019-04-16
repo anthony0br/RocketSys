@@ -16,4 +16,4 @@ RocketSys is a simple object-orientated API for launching rockets in Roblox feat
 There is a supportive community surrounding the rocket system. Our discord server consists of a large variety of people - from Roblox game developers to those who model rockets. You can join us [here](https://discord.gg/bqRdNPw).
 
 ## Copyright
-The RocketSys MainModule is licensed under [MIT license](https://raw.githubusercontent.com/Sublivion/RocketSys/master/LICENSE). The licenses for other files and their copyright holders are included in the file.
+The RocketSys MainModule is licensed under the [MIT license](https://raw.githubusercontent.com/Sublivion/RocketSys/master/LICENSE). The licenses for other files and their copyright holders are included in the file.
