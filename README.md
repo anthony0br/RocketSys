@@ -1,7 +1,7 @@
-# RocketSys III
+# ![](https://raw.githubusercontent.com/Sublivion/RocketSys/master/RocketSys.png) RocketSys III
 ![Release](https://img.shields.io/github/tag-date/sublivion/rocketsys.svg?style=flat-square) ![Last commit](https://img.shields.io/github/last-commit/sublivion/rocketsys.svg?style=flat-square) ![MIT license](https://img.shields.io/github/license/sublivion/rocketsys.svg?style=flat-square) ![Open issues](https://img.shields.io/github/issues/sublivion/rocketsys.svg?style=flat-square) ![Closed issues](https://img.shields.io/github/issues-closed/sublivion/rocketsys.svg?style=flat-square) ![Contributors](https://img.shields.io/github/contributors/sublivion/rocketsys.svg?style=flat-square) ![Code size](https://img.shields.io/github/languages/code-size/sublivion/rocketsys.svg?style=flat-square) ![Discord](https://img.shields.io/discord/530216666416807947.svg?style=flat-square)
 
-### ![Logo](https://raw.githubusercontent.com/Sublivion/RocketSys/master/RocketSys.png) [Website](https://sublivion.github.io/RocketSys/) | [Documentation](https://sublivion.github.io/RocketSys/)
+### [Website](https://sublivion.github.io/RocketSys/) | [Documentation](https://sublivion.github.io/RocketSys/)
 ---
 ###### Note: RocketSys III is currently under development and is not yet released
 
