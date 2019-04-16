@@ -1,0 +1,9 @@
+.gradient-color {
+    background: rgb(0, 123, 195);
+    background: -moz-linear-gradient(30deg, rgb(0, 123, 195), rgb(46, 184, 183)) ;
+    background: -webkit-linear-gradient(30deg, rgb(0, 123, 195), rgb(46, 184, 183)) ;
+    background: linear-gradient(30deg, rgb(0, 123, 195), rgb(46, 184, 183)) ;
+}
+.reflection-text:not(.reflection-text-white)::after {
+    background: url(../../images/line-break/line-break-2.svg) no-repeat;
+}
