@@ -6,7 +6,7 @@
 ###### Note: RocketSys III is currently under development and is not yet released
 
 ## What's RocketSys?
-RocketSys is a simple object-orientated API for launching rockets in Roblox featuring real world physics equations. Don't worry if you're not a coder though - we've provided many examples and rocket presets in the repository. You can find tutorials and documentation on [our website](https://sublivion.github.io/RocketSys/). Sublivion - who founded the project at the beginning of 2019 - codes the API and other developers are working on presets and example scripts.
+RocketSys is a simple object-orientated API for launching rockets in Roblox featuring real world physics equations. Don't worry if you're not a coder though - we've provided many examples and rocket presets in the repository. You can find tutorials and documentation on [our website](https://sublivion.github.io/RocketSys/). @Sublivion - who founded the project at the beginning of 2019 - codes the API and other developers are working on presets and example scripts.
 
 ## Aims
 - The original Rocket System aims: allow everyone to simulate realistic rocket and missile launches in Roblox games
@@ -16,4 +16,4 @@ RocketSys is a simple object-orientated API for launching rockets in Roblox feat
 There is a supportive community surrounding the rocket system. Our discord server consists of a large variety of people - from Roblox game developers to those who model rockets. You can join us [here](https://discord.gg/bqRdNPw).
 
 ## Copyright
-The RocketSys MainModule is licensed under the [MIT license](https://raw.githubusercontent.com/Sublivion/RocketSys/master/LICENSE). The licenses for other files and their copyright holders are included in the file.
+The RocketSys MainModule is licensed under the [MIT license](https://raw.githubusercontent.com/Sublivion/RocketSys/master/LICENSE). The licenses for other files and their copyright holders are included in the file. The logo is designed by @jobcremers.
