@@ -91,19 +91,21 @@
 					- New rocket class for the separated stage
 					
 					
-			Rocket.stages.stageName:setThrustVector(orientation)
+			Rocket:setOrientationGoal(orientation, time)
 			
 				ARGUMENTS:
-					- orientation: the new orientation of the engines
+					- orientation: the new orientation goal of the rocket in degrees (vector3)
+					- time: the time it should take to achieve this goal ignoring limitations (seconds, defaults to 0)
 				
 				DOES:
 					- Set the orientation of the engines to orientation to simulate thrust vectoring
 	
 					
-	NOTES:
+	TIPS:
 		- Rocket System III uses SI units - as opposed to imperial units found in v1 and v2
-		- If your rocket is unbalanced, set asymmetrical parts to massless
+		- If your rocket is unstable you might want to set asymmetrical parts to massless
 		- The PrimaryPart of each stage should be set to the centremost engine nozzle
+		- The PrimaryParts should have their TOP surface in the direction of travel
 --]]
 
 -- Constants
@@ -116,7 +118,6 @@ TEMPERATURE = 15
 HUMIDITY = 0.75
 MOVING_VELOCITY = 0.05
 GRAVITY_CONSTANT = 6.673E-11
-DIRECTION = Vector3.new(0, 1, 0)
 
 -- Math functions
 log = math.log
@@ -131,6 +132,7 @@ rabs = math.abs
 newInstance = Instance.new
 V3 = Vector3.new
 Cf = CFrame.new
+CfA = CFrame.Angles
 
 
 -- Returns all of the parts inside of a model
@@ -244,11 +246,6 @@ do
 		return Rocket.new(self)
 	end
 	
-	-- Sets attachment orientation
-	function Stage:setThrustVector(orientation)
-		self.model.PrimaryPart.Attachment.Orientation = orientation
-	end
-	
 	-- Sets the throttle of the stage
 	function Stage:setThrottle(t)
 		self.throttle = t
@@ -283,6 +280,7 @@ do
 		-- Create model
 		self.model = newInstance("Model")
 		self.model.Name = "Rocket System III"
+		self.orientationGoal = Cf()
 		
 		-- Create stages
 		local stages = {...}
@@ -310,13 +308,14 @@ do
 		self.model.PrimaryPart = newInstance("Part")
 		self.model.PrimaryPart.Parent = self.model
 		self.model.PrimaryPart.Name = "PrimaryPart"
-		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model), DIRECTION)
+		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model))
 		self.model.PrimaryPart.Transparency = 1
 		self.model.PrimaryPart.CanCollide = false
 		
 		-- Create BodyGyro to balance rocket
 		local gyro = Instance.new("BodyGyro")
 		gyro.Parent = self.model.PrimaryPart
+		gyro.CFrame = self.model.PrimaryPart.CFrame
 		
 		-- Create welds and constraints
 		for _, stage in pairs(self.stages) do
@@ -340,8 +339,19 @@ do
 			
 			local vf = newInstance("VectorForce")
 			vf.Attachment0 = newInstance("Attachment")
+			vf.Name = "WorldForce"
 			vf.Force = V3()
+			vf.Attachment0.CFrame = CFrame.new(getModelCentre(stage.model))
+									* stage.model.PrimaryPart.CFrame:inverse()
 			vf.RelativeTo = Enum.ActuatorRelativeTo.World
+			vf.Attachment0.Parent = stage.model.PrimaryPart
+			vf.Parent = stage.model.PrimaryPart
+			
+			vf = newInstance("VectorForce")
+			vf.Attachment0 = newInstance("Attachment")
+			vf.Name = "LocalForce"
+			vf.Force = V3()
+			vf.RelativeTo = Enum.ActuatorRelativeTo.Attachment0
 			vf.Attachment0.Parent = stage.model.PrimaryPart
 			vf.Parent = stage.model.PrimaryPart
 		end
@@ -351,13 +361,21 @@ do
 		return self
 	end
 	
+	-- Sets the orientation goal
+	function Rocket:setOrientationGoal(orientation, t)
+		t = t or 0
+		self.orientationGoal = V3(rad(orientation.x), rad(orientation.y), rad(orientation.z))
+		self.orientationTime = t
+		self.lastOrientationGoalUpdate = tick()
+	end
+	
 	-- Updates the rocket's body movers, sounds, and effects
 	function Rocket:update()
 		dt = tick() - lastTick
 		lastTick = tick()
-		local velocity = self.model.PrimaryPart.Velocity * SCALE -- m/s
+		local globalVelocity = self.model.PrimaryPart.Velocity * SCALE -- m/s
+		local localVelocity = self.model.PrimaryPart.CFrame:vectorToObjectSpace(globalVelocity)
 		local altitude = self.model.PrimaryPart.CFrame.y * SCALE -- m
-		local isMoving = velocity.Magnitude > MOVING_VELOCITY
 		
 		-- Get the frontal stage to calculate forward drag
 		local frontalStage, highestStage, lowestStage, highestHeight, lowestHeight
@@ -371,12 +389,10 @@ do
 				lowestHeight = v.model.PrimaryPart.CFrame.y
 			end
 		end
-		local forward = abs((self.model.PrimaryPart.CFrame.lookVector - velocity).magnitude) 
-						<= ((-self.model.PrimaryPart.CFrame.lookVector - velocity).magnitude)
+		local forward = localVelocity.y >= 0
 		frontalStage = forward and highestStage or lowestStage
 		
 		-- Iterate through stages to update each one
-		local force = V3()
 		for i, stage in pairs(self.stages) do			
 			-- Calculate mass and propellant
 			stage.propellant = clamp(stage.propellant - stage.burnRate * stage.throttle * dt, 0, stage.wetMass - stage.dryMass)
@@ -385,34 +401,41 @@ do
 			-- Calculate thrust using the rocket equation
 			local specificImpulse = ((altitude * stage.specificImpulseVac / KARMAN_LINE) + stage.specificImpulseASL) * stage.throttle
 			local dv = clamp(stage.propellant, 0, 1) * (specificImpulse * log(stage.wetMass / stage.dryMass)) / (stage.mass / stage.dryMass)
-			local thrust = dv *	stage.robloxMass * stage.model.PrimaryPart.CFrame.lookVector
+			local thrust = dv *	stage.robloxMass * V3(0, 1, 0)
 			
 			-- Calculate drag
 			local density = getDensity(altitude)
 			local eSize = stage.model:GetExtentsSize() * SCALE
 			local xArea, zArea, yArea = eSize.x * eSize.y, eSize.z * eSize.y, eSize.z * eSize.x
-			local drag = getDrag(density, velocity, V3(xArea, 0, zArea), stage.dragCoefficient)
+			local horizontalLocalSpeed = sqrt(localVelocity.x^2, localVelocity.z^2)
+			local drag = getDrag(density, horizontalLocalSpeed, V3(xArea, 0, zArea), stage.dragCoefficient)
 			if stage == frontalStage then
-				drag = drag + getDrag(density, velocity, V3(0, yArea, 0), stage.dragCoefficient)
+				drag = drag + getDrag(density, localVelocity.y, V3(0, yArea, 0), stage.dragCoefficient)
 			end
 			
 			-- Calculate gravity
+			local horizontalGlobalSpeed = sqrt(globalVelocity.x^2, globalVelocity.z^2)
 			local orbitalSpeed = sqrt(GRAVITY_CONSTANT * PLANET_MASS) / (PLANET_RADIUS + altitude)
-			local horizontalSpeed = sqrt(velocity.x^2, velocity.z^2)
-			local ga = ((GRAVITY_CONSTANT * PLANET_MASS) / (PLANET_RADIUS + altitude)^2) * (horizontalSpeed - orbitalSpeed) / orbitalSpeed
+			local ga = ((GRAVITY_CONSTANT * PLANET_MASS) / (PLANET_RADIUS + altitude)^2) * (horizontalGlobalSpeed - orbitalSpeed) / orbitalSpeed
 			local gravity = Vector3.new(0, -(ga * stage.robloxMass), 0)
 			
-			-- Update VectorForce
+			-- Update VectorForces
 			local idleForce = V3(0, workspace.Gravity * stage.robloxMass, 0)
-			stage.model.PrimaryPart.VectorForce.Force = (idleForce + thrust) - (gravity + drag)
-			force = force + stage.model.PrimaryPart.VectorForce.Force
+			stage.model.PrimaryPart.WorldForce.Force = idleForce - gravity
+			stage.model.PrimaryPart.LocalForce.Force = thrust - drag
 		end
+		
+		-- Update trajectory
+		local progress = math.clamp((tick() - (self.lastOrientationGoalUpdate)) / self.orientationTime, 0, 1)
+		local goalVector = self.orientationGoal * progress
+		self.model.PrimaryPart.BodyGyro.CFrame = CfA(goalVector.x, goalVector.y, goalVector.z)
+		--self.model.PrimaryPart.BodyGyro.MaxTorque = V3(1, 1, 1) * force * MAX_GIMBAL_ANGLE * (length / 2)
 	end
 	
 	-- Used by :separate to ensure that separated stages are no longer simulated
 	function Rocket:removeStage(stage)
 		self.stages[stage] = nil
-		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model), DIRECTION)
+		self.model.PrimaryPart.CFrame = CFrame.new(getModelCentre(self.model))
 		print(CFrame.new(getModelCentre(self.model)))
 	end
 end
