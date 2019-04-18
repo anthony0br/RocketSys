@@ -339,19 +339,10 @@ do
 			
 			local vf = newInstance("VectorForce")
 			vf.Attachment0 = newInstance("Attachment")
-			vf.Name = "WorldForce"
 			vf.Force = V3()
 			vf.Attachment0.CFrame = CFrame.new(getModelCentre(stage.model))
 									* stage.model.PrimaryPart.CFrame:inverse()
 			vf.RelativeTo = Enum.ActuatorRelativeTo.World
-			vf.Attachment0.Parent = stage.model.PrimaryPart
-			vf.Parent = stage.model.PrimaryPart
-			
-			vf = newInstance("VectorForce")
-			vf.Attachment0 = newInstance("Attachment")
-			vf.Name = "LocalForce"
-			vf.Force = V3()
-			vf.RelativeTo = Enum.ActuatorRelativeTo.Attachment0
 			vf.Attachment0.Parent = stage.model.PrimaryPart
 			vf.Parent = stage.model.PrimaryPart
 		end
@@ -394,14 +385,16 @@ do
 		
 		-- Iterate through stages to update each one
 		for i, stage in pairs(self.stages) do			
-			-- Calculate mass and propellant
+			-- Calculate propellant
 			stage.propellant = clamp(stage.propellant - stage.burnRate * stage.throttle * dt, 0, stage.wetMass - stage.dryMass)
-			stage.mass = stage.dryMass + stage.propellant
 			
 			-- Calculate thrust using the rocket equation
-			local specificImpulse = ((altitude * stage.specificImpulseVac / KARMAN_LINE) + stage.specificImpulseASL) * stage.throttle
-			local dv = clamp(stage.propellant, 0, 1) * (specificImpulse * log(stage.wetMass / stage.dryMass)) / (stage.mass / stage.dryMass)
-			local thrust = dv *	stage.robloxMass * V3(0, 1, 0)
+			local specificImpulse = (math.clamp(altitude / KARMAN_LINE, 0, 1) 
+									* (stage.specificImpulseVac - stage.specificImpulseASL)
+									+ stage.specificImpulseASL) * stage.throttle
+			print(specificImpulse, altitude)
+			local dv = clamp(stage.propellant, 0, 1) * (specificImpulse * log(stage.wetMass / stage.dryMass))
+			local thrust = V3(0, dv * stage.robloxMass, 0)
 			
 			-- Calculate drag
 			local density = getDensity(altitude)
@@ -421,8 +414,7 @@ do
 			
 			-- Update VectorForces
 			local idleForce = V3(0, workspace.Gravity * stage.robloxMass, 0)
-			stage.model.PrimaryPart.WorldForce.Force = idleForce - gravity
-			stage.model.PrimaryPart.LocalForce.Force = thrust - drag
+			stage.model.PrimaryPart.VectorForce.Force = ((idleForce - gravity) + (thrust - drag) * stage.model.PrimaryPart.CFrame.lookVector) / SCALE
 		end
 		
 		-- Update trajectory
