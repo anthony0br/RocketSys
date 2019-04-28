@@ -109,34 +109,34 @@
 --]]
 
 -- Constants
-SCALE = 0.28 -- studs/meters
-PLANET_MASS = 5.972E+24
-PLANET_RADIUS = 6371E+3
-DENSITY_ASL = 1.225
-KARMAN_LINE = 100000
-TEMPERATURE = 15
-HUMIDITY = 0.75
-MOVING_VELOCITY = 0.05
-GRAVITY_CONSTANT = 6.673E-11
+local SCALE = 0.28 -- studs/meters
+local PLANET_MASS = 5.972E+24
+local PLANET_RADIUS = 6371E+3
+local DENSITY_ASL = 1.225
+local KARMAN_LINE = 100000
+local TEMPERATURE = 15
+local HUMIDITY = 0.75
+local MOVING_VELOCITY = 0.05
+local GRAVITY_CONSTANT = 6.673E-11
 
 -- Math functions
-log = math.log
-rad = math.rad
-exp = math.exp
-sin = math.sin
-sqrt = math.sqrt
-clamp = math.clamp
-rabs = math.abs
+local log = math.log
+local rad = math.rad
+local exp = math.exp
+local sin = math.sin
+local sqrt = math.sqrt
+local clamp = math.clamp
+local rabs = math.abs
 
 -- Constructors
-newInstance = Instance.new
-V3 = Vector3.new
-Cf = CFrame.new
-CfA = CFrame.Angles
+local newInstance = Instance.new
+local V3 = Vector3.new
+local Cf = CFrame.new
+local CfA = CFrame.Angles
 
 
 -- Returns all of the parts inside of a model
-function getParts(m)
+local function getParts(m)
 	local t = {}
 	for i,v in pairs(m:GetDescendants()) do
 		if v:IsA("BasePart") then table.insert(t,v) end
@@ -145,7 +145,7 @@ function getParts(m)
 end
 
 -- Returns the position of the centre of the model
-function getModelCentre(model)
+local function getModelCentre(model)
 	local sX,sY,sZ
 	local mX,mY,mZ
 	for i, v in pairs(getParts(model)) do
@@ -163,14 +163,14 @@ function getModelCentre(model)
 end
 
 -- Returns the air density at a specific altitude
-function getDensity(h)
+local function getDensity(h)
     local t=(h<11000 and TEMPERATURE-((56.46+TEMPERATURE)*(h/11000))) or (h<25000 and -56.46) or -131.21+.00299*h
     local kpa=(h<11000 and 101.29*(((t+273.1)/288.08)^5.256)) or (h<25000 and 22.65*exp(1.73-.000157*h)) or 2.488*(((t+273.1)/216.6)^-11.388)
 	return ((kpa/(.2869*(t+273.1)))*(1+HUMIDITY)/(1+(461.5/286.9)*HUMIDITY)) * DENSITY_ASL
 end
 
 -- Returns the Roblox mass of a container
-function getMass(container)
+local function getMass(container)
 	local mass = 0
 	for i, v in pairs(getParts(container)) do
 		mass = mass + v:GetMass()
@@ -179,17 +179,17 @@ function getMass(container)
 end
 
 -- Returns the air resistance on an object
-function getDrag(density, velocity, area, coefficient)
+local function getDrag(density, velocity, area, coefficient)
 	return (velocity * abs(velocity) * density) / 2 * area * coefficient
 end
 
 -- Returns the absolute version of a number or a vector
-function abs(x)
+local function abs(x)
 	return typeof(x) == "number" and rabs(x) or "vector3" and V3(rabs(x.x), rabs(x.y), rabs(x.z))
 end
 
 -- Toggles engine effects
-function toggleEngineEffects(container, isVal, val)
+local function toggleEngineEffects(container, isVal, val)
 	for i, v in pairs(container:GetChildren()) do
 		if v:IsA("Beam") or v:IsA("ParticleEmitter") then
 			v.Enabled = isVal and val or not v.Enabled
@@ -203,6 +203,7 @@ end
 
 
 -- Private Class Stage
+local Stage
 do
 	Stage = {}
 	Stage.__index = Stage
@@ -259,6 +260,7 @@ end
 
 
 -- Public Class Rocket
+local Rocket
 do
 	Rocket = {}
 	Rocket.__index = Rocket
