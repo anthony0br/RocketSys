@@ -8,7 +8,6 @@
 
 --[[
 	MIT License
-
 	Copyright (c) 2019 Anthony O"Brien (Sublivion)
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -178,14 +177,15 @@ local function getMass(container)
 	return mass
 end
 
--- Returns the air resistance on an object
-local function getDrag(density, velocity, area, coefficient)
-	return (velocity * abs(velocity) * density) / 2 * area * coefficient
-end
-
 -- Returns the absolute version of a number or a vector
 local function abs(x)
 	return typeof(x) == "number" and rabs(x) or "vector3" and V3(rabs(x.x), rabs(x.y), rabs(x.z))
+end
+
+
+-- Returns the air resistance on an object
+local function getDrag(density, velocity, area, coefficient)
+	return (velocity * abs(velocity) * density) / 2 * area * coefficient
 end
 
 -- Toggles engine effects
@@ -201,13 +201,15 @@ local function toggleEngineEffects(container, isVal, val)
 	end
 end
 
+-- Define all classes
+local Stage = {}
+Stage.__index = Stage
+local Rocket = {}
+Rocket.__index = Rocket
+
 
 -- Private Class Stage
-local Stage
 do
-	Stage = {}
-	Stage.__index = Stage
-	
 	--[[
 		Arguments:
 			- tab: table including the settings for the stage
@@ -235,15 +237,10 @@ do
 			- rocket: new rocket object featuring the original stage but physically separated
 			  from the rocket
 	--]]
-	function Stage:separate(rocket)
-		if rocket and rocket.model and rocket.model.PrimaryPart and rocket.stages[self.name] then
-			self.model.PrimaryPart.StageConnector:Destroy()
-			self.model.Parent = workspace
-			rocket:removeStage(self.name)
-		else
-			warn("Argument 1 (rocket) invalid or nil in method :separate()")
-		end
-		
+	function Stage:separate()
+		self.model.PrimaryPart.StageConnector:Destroy()
+		self.model.Parent = workspace
+		self.rocket:removeStage(self.name)
 		return Rocket.new(self)
 	end
 	
@@ -260,7 +257,6 @@ end
 
 
 -- Public Class Rocket
-local Rocket
 do
 	Rocket = {}
 	Rocket.__index = Rocket
@@ -293,6 +289,7 @@ do
 				if v.model.PrimaryPart then
 					if not self.stages[v.name] then
 						local stage = Stage.new(v)
+						stage.rocket = self
 						self.stages[v.name] = stage
 						stage.model.Parent = self.model
 					else
@@ -394,7 +391,6 @@ do
 			local specificImpulse = (math.clamp(altitude / KARMAN_LINE, 0, 1) 
 									* (stage.specificImpulseVac - stage.specificImpulseASL)
 									+ stage.specificImpulseASL) * stage.throttle
-			print(specificImpulse, altitude)
 			local dv = clamp(stage.propellant, 0, 1) * (specificImpulse * log(stage.wetMass / stage.dryMass))
 			local thrust = V3(0, dv * stage.robloxMass, 0)
 			
@@ -423,7 +419,7 @@ do
 		local progress = math.clamp((tick() - (self.lastOrientationGoalUpdate)) / self.orientationTime, 0, 1)
 		local goalVector = self.orientationGoal * progress
 		self.model.PrimaryPart.BodyGyro.CFrame = CfA(goalVector.x, goalVector.y, goalVector.z)
-		--self.model.PrimaryPart.BodyGyro.MaxTorque = V3(1, 1, 1) * force * MAX_GIMBAL_ANGLE * (length / 2)
+		print(globalVelocity.magnitude, altitude)
 	end
 	
 	-- Used by :separate to ensure that separated stages are no longer simulated
