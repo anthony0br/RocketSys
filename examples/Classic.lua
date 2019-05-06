@@ -1,5 +1,5 @@
 local RunService = game:GetService("RunService")
-local rs = require(script.Parent["Rocket System III"].MainModule)
+local rs = require(script.Parent["RocketSysIII"].MainModule)
 
 
 local stage1 = {
